@@ -5,14 +5,14 @@
 
 'use strict';
 
-exports.safeRequire = safeRequire;
+// exports.safeRequire = safeRequire;
 exports.fieldsToArray = fieldsToArray;
 exports.selectFields = selectFields;
 exports.sanitizeQuery = sanitizeQuery;
 exports.parseSettings = parseSettings;
 exports.mergeSettings = exports.deepMerge = deepMerge;
 exports.deepMergeProperty = deepMergeProperty;
-exports.isPlainObject = isPlainObject;
+// exports.isPlainObject = isPlainObject;
 exports.defineCachedRelations = defineCachedRelations;
 exports.sortObjectsByIds = sortObjectsByIds;
 exports.setScopeValuesFromWhere = setScopeValuesFromWhere;
@@ -25,11 +25,11 @@ exports.hasRegExpFlags = hasRegExpFlags;
 exports.idEquals = idEquals;
 exports.findIndexOf = findIndexOf;
 exports.collectTargetIds = collectTargetIds;
-exports.idName = idName;
+// exports.idName = idName;
 exports.rankArrayElements = rankArrayElements;
 exports.idsHaveDuplicates = idsHaveDuplicates;
-exports.isClass = isClass;
-exports.escapeRegExp = escapeRegExp;
+// exports.isClass = isClass;
+// exports.escapeRegExp = escapeRegExp;
 exports.applyParentProperty = applyParentProperty;
 
 const g = require('strong-globalize')();
@@ -49,7 +49,7 @@ const BUILDER_PARENT_SETTING = 'parentRef';
  */
 const PARENT_PROPERTY_NAME = '__parent';
 
-function safeRequire(module) {
+export function safeRequire(module: string) {
   try {
     return require(module);
   } catch (e) {
@@ -346,7 +346,7 @@ function isRegExpOperator(operator) {
  * @param {string} str
  * @returns {string}
  */
-function escapeRegExp(str) {
+export function escapeRegExp(str: string): string {
   assert.strictEqual(typeof str, 'string', 'String required for regexp escaping');
   try {
     new RegExp(str); // try to parse string as regexp
@@ -499,7 +499,7 @@ function parseSettings(urlStr) {
  * @param {Object} extras The object to merge with base
  * @returns {Object} The merged object
  */
-function deepMerge(base, extras) {
+export function deepMerge(base: object, extras: object): object {
   // deepMerge allows undefined extras to allow deep cloning of arrays
   const array = Array.isArray(base) && (Array.isArray(extras) || !extras);
   let dst = array && [] || {};
@@ -607,7 +607,11 @@ function rankArrayElements(array, rank) {
  * Define an non-enumerable __cachedRelations property
  * @param {Object} obj The obj to receive the __cachedRelations
  */
-function defineCachedRelations(obj) {
+function defineCachedRelations<T extends object>(obj: T & {__cachedRelations: undefined}): T & {__cachedRelations:{ writable: true,
+  enumerable: false,
+  configurable: true,
+  value: {},
+}} {
   if (!obj.__cachedRelations) {
     Object.defineProperty(obj, '__cachedRelations', {
       writable: true,
@@ -623,7 +627,7 @@ function defineCachedRelations(obj) {
  * @param {*} obj The obj value
  * @returns {boolean}
  */
-function isPlainObject(obj) {
+export function isPlainObject(obj: object) {
   return (typeof obj === 'object') && (obj !== null) &&
     (obj.constructor === Object);
 }
@@ -685,7 +689,7 @@ function isBsonType(value) {
  * @param {Array} an array
  * @returns {Array} an array with unique items
  */
-function uniq(a) {
+export function uniq(a: unknown[]): unknown[] {
   const uniqArray = [];
   if (!a) {
     return uniqArray;
@@ -803,7 +807,7 @@ function collectTargetIds(targetData, idPropertyName) {
  * @param {ModelConstructor} m - Model Constructor
  * @returns {String}
  */
-function idName(m) {
+export function idName(m) {
   return m.definition.idName() || 'id';
 }
 
@@ -852,7 +856,7 @@ function idsHaveDuplicates(ids) {
   return hasDuplicates === true;
 }
 
-function isClass(fn) {
+export function isClass(fn: Function) {
   return fn && fn.toString().startsWith('class ');
 }
 

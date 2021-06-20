@@ -35,6 +35,7 @@
     "posttest": "npm run tsc && npm run lint"
   },
   "devDependencies": {
+    "@types/depd": "^1.1.32",
     "@types/node": "^10.0.8",
     "async-iterators": "^0.2.2",
     "bson": "^4.0.1",

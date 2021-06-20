@@ -3,16 +3,7 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-'use strict';
-
 const g = require('strong-globalize')();
-
-module.exports.buildOneToOneIdentityMapWithOrigKeys = buildOneToOneIdentityMapWithOrigKeys;
-module.exports.buildOneToManyIdentityMapWithOrigKeys = buildOneToManyIdentityMapWithOrigKeys;
-module.exports.join = join;
-module.exports.KVMap = KVMap;
-
-const util = require('util');
 
 function getId(obj, idName) {
   const id = obj && obj[idName];
@@ -21,11 +12,12 @@ function getId(obj, idName) {
       'Please make sure `fields` include "%s" if it\'s present in the `filter`',
     idName, obj, idName);
     const err = new Error(msg);
-    err.statusCode = 400;
+    err['statusCode'] = 400;
     throw err;
   }
   return id;
 }
+
 /**
  * Effectively builds associative map on id -> object relation and stores original keys.
  * Map returned in form of object with ids in keys and object as values.
@@ -34,7 +26,7 @@ function getId(obj, idName) {
  * In case of collisions last wins. For non-unique ids use buildOneToManyIdentityMap()
  * @returns {} object where keys are ids and values are objects itself
  */
-function buildOneToOneIdentityMapWithOrigKeys(objs, idName) {
+export function buildOneToOneIdentityMapWithOrigKeys(objs: object[], idName: string) {
   const kvMap = new KVMap();
   for (let i = 0; i < objs.length; i++) {
     const obj = objs[i];
@@ -44,12 +36,12 @@ function buildOneToOneIdentityMapWithOrigKeys(objs, idName) {
   return kvMap;
 }
 
-function buildOneToManyIdentityMapWithOrigKeys(objs, idName) {
+export function buildOneToManyIdentityMapWithOrigKeys(objs, idName) {
   const kvMap = new KVMap();
   for (let i = 0; i < objs.length; i++) {
     const obj = objs[i];
     const id = getId(obj, idName);
-    const value = kvMap.get(id) || [];
+    const value = kvMap.get<object[]>(id) || [];
     value.push(obj);
     kvMap.set(id, value);
   }
@@ -63,7 +55,7 @@ function buildOneToManyIdentityMapWithOrigKeys(objs, idName) {
  * @param oneToManyIdMap
  * @param mergeF  function(obj, objectsToMergeIn)
  */
-function join(oneToOneIdMap, oneToManyIdMap, mergeF) {
+export function join(oneToOneIdMap, oneToManyIdMap, mergeF) {
   const ids = oneToOneIdMap.getKeys();
   for (let i = 0; i < ids.length; i++) {
     const id = ids[i];
@@ -76,45 +68,48 @@ function join(oneToOneIdMap, oneToManyIdMap, mergeF) {
 /**
  * Map with arbitrary keys and values. User .set() and .get() to work with values instead of []
  * @returns {{set: Function, get: Function, remove: Function, exist: Function, getKeys: Function}}
- * @constructor
  */
-function KVMap() {
-  const _originalKeyFieldName = 'originalKey';
-  const _valueKeyFieldName = 'value';
-  const _dict = {};
-  const keyToString = function(key) { return key.toString(); };
-  const mapImpl = {
-    set: function(key, value) {
-      const recordObj = {};
-      recordObj[_originalKeyFieldName] = key;
-      recordObj[_valueKeyFieldName] = value;
-      _dict[keyToString(key)] = recordObj;
-      return true;
-    },
-    get: function(key) {
-      const storeObj = _dict[keyToString(key)];
-      if (storeObj) {
-        return storeObj[_valueKeyFieldName];
-      } else {
-        return undefined;
-      }
-    },
-    remove: function(key) {
-      delete _dict[keyToString(key)];
-      return true;
-    },
-    exist: function(key) {
-      const result = _dict.hasOwnProperty(keyToString(key));
-      return result;
-    },
-    getKeys: function() {
-      const result = [];
-      for (const key in _dict) {
-        result.push(_dict[key][_originalKeyFieldName]);
-      }
-      return result;
-    },
+export class KVMap {
+  protected static readonly _originalKeyFieldName = 'originalKey';
+  protected static readonly _valueKeyFieldName = 'value';
+  protected readonly _dict = {};
+  
+  protected static keyToString(key: {toString: () => string}) {
+    return key.toString();
+  }
 
-  };
-  return mapImpl;
+  set(key: string, value: unknown): true {
+    const recordObj = {};
+    recordObj[KVMap._originalKeyFieldName] = key;
+    recordObj[KVMap._valueKeyFieldName] = value;
+    this._dict[KVMap.keyToString(key)] = recordObj;
+    return true;
+  }
+
+  get<T = unknown>(key: string): T | undefined {
+    const storeObj = this._dict[KVMap.keyToString(key)];
+    if (storeObj) {
+      return storeObj[KVMap._valueKeyFieldName];
+    } else {
+      return undefined;
+    }
+  }
+
+  remove(key: string): true {
+    delete this._dict[KVMap.keyToString(key)];
+    return true;
+  }
+
+  exist(key: string): boolean {
+    const result = this._dict.hasOwnProperty(KVMap.keyToString(key));
+    return result;
+  }
+
+  getKeys(): string[] {
+    const result = [];
+    for (const key of Object.keys(this._dict)) {
+      result.push(this._dict[key][KVMap._originalKeyFieldName]);
+    }
+    return result;
+  }
 }

@@ -5,7 +5,11 @@
 
 'use strict';
 
-const Types = {};
+export const Types = {
+  Text: class {
+    constructor
+  }
+};
 /**
  * Schema types
  */

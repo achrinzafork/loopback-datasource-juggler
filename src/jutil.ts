@@ -3,22 +3,37 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-'use strict';
+import util from 'util';
 
-const util = require('util');
+const DEFAULT_INHERITANCE_OPTIONS: InheritanceOptions = {
+  staticProperties: true,
+  override: false,
+}
+
+interface InheritanceOptions {
+  staticProperties?: boolean,
+  override?: boolean,
+}
+
+interface MixinOptions extends InheritanceOptions {
+  instanceProperties?: boolean,
+  proxyFunctions?: boolean,
+}
+
+const DEFAULT_MIXIN_OPTIONS: MixinOptions = {
+  staticProperties: true,
+  instanceProperties: true,
+  override: false,
+  proxyFunctions: false,
+}
 
 /**
  *
  * @param newClass
  * @param baseClass
  */
-exports.inherits = function(newClass, baseClass, options) {
+export function inherits(newClass: Function, baseClass: Function, options: InheritanceOptions = DEFAULT_INHERITANCE_OPTIONS) {
   util.inherits(newClass, baseClass);
-
-  options = options || {
-    staticProperties: true,
-    override: false,
-  };
 
   if (options.staticProperties) {
     Object.keys(baseClass).forEach(function(classProp) {
@@ -31,13 +46,17 @@ exports.inherits = function(newClass, baseClass, options) {
   }
 };
 
+export type MixinClass = Function & {
+  _mixins?: Function[]
+}
+
 /**
  * Mix in the a class into the new class
  * @param newClass The target class to receive the mixin
  * @param mixinClass The class to be mixed in
  * @param options
  */
-exports.mixin = function(newClass, mixinClass, options) {
+export function mixin(newClass: MixinClass, mixinClass: MixinClass, options: MixinOptions = DEFAULT_MIXIN_OPTIONS) {
   if (Array.isArray(newClass._mixins)) {
     if (newClass._mixins.indexOf(mixinClass) !== -1) {
       return;
@@ -46,13 +65,6 @@ exports.mixin = function(newClass, mixinClass, options) {
   } else {
     newClass._mixins = [mixinClass];
   }
-
-  options = options || {
-    staticProperties: true,
-    instanceProperties: true,
-    override: false,
-    proxyFunctions: false,
-  };
 
   if (options.staticProperties === undefined) {
     options.staticProperties = true;
@@ -73,7 +85,7 @@ exports.mixin = function(newClass, mixinClass, options) {
   return newClass;
 };
 
-function mixInto(sourceScope, targetScope, options) {
+function mixInto(sourceScope: MixinClass, targetScope: MixinClass, options: MixinOptions) {
   Object.keys(sourceScope).forEach(function(propertyName) {
     const targetPropertyExists = targetScope.hasOwnProperty(propertyName);
     const sourceProperty = Object.getOwnPropertyDescriptor(sourceScope, propertyName);
@@ -94,7 +106,7 @@ function mixInto(sourceScope, targetScope, options) {
   });
 }
 
-function mergeMixins(source, target) {
+function mergeMixins(source: MixinClass['_mixins'], target: MixinClass['_mixins']) {
   // hand-written equivalent of lodash.union()
   for (const ix in source) {
     const mx = source[ix];

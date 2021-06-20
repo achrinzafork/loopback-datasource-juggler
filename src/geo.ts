@@ -3,24 +3,21 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-'use strict';
-
-const assert = require('assert');
+import assert from 'assert';
 
 /*!
  * Get a near filter from a given where object. For connector use only.
  */
 
-exports.nearFilter = function nearFilter(where) {
+export function nearFilter(where) {
   const nearResults = [];
   nearSearch(where);
   return (!nearResults.length ? false : nearResults);
 
-  function nearSearch(clause, parentKeys) {
+  function nearSearch(clause: object, parentKeys: string[] = []) {
     if (typeof clause !== 'object') {
       return false;
     }
-    parentKeys = parentKeys || [];
 
     Object.keys(clause).forEach(function(clauseKey) {
       if (typeof clause[clauseKey] !== 'object' || !clause[clauseKey]) return;
@@ -67,7 +64,7 @@ exports.nearFilter = function nearFilter(where) {
  * This may make it erroneously look like a given page is the end of the result set.
  */
 
-exports.filter = function(rawResults, filters) {
+export function filter(rawResults, filters) {
   const distances = {};
   const results = [];
 
@@ -85,7 +82,7 @@ exports.filter = function(rawResults, filters) {
       // filter out results without locations
       if (!loc) return;
 
-      if (!(loc instanceof GeoPoint)) loc = GeoPoint(loc);
+      if (!(loc instanceof GeoPoint)) loc = new GeoPoint(loc);
 
       if (typeof loc.lat !== 'number') return;
       if (typeof loc.lng !== 'number') return;
@@ -117,8 +114,6 @@ exports.filter = function(rawResults, filters) {
 
   return results;
 };
-
-exports.GeoPoint = GeoPoint;
 
 /**
  * The GeoPoint object represents a physical location.
@@ -161,120 +156,136 @@ exports.GeoPoint = GeoPoint;
  * @property {Number} lng The longitude point in degrees. Range: -180 to 180.
  */
 
-function GeoPoint(data) {
-  if (!(this instanceof GeoPoint)) {
-    return new GeoPoint(data);
-  }
-
-  if (arguments.length === 2) {
-    data = {
-      lat: arguments[0],
-      lng: arguments[1],
-    };
-  }
-
-  assert(Array.isArray(data) || typeof data === 'object' || typeof data === 'string',
-    'must provide valid geo-coordinates array [lat, lng] or object or a "lat, lng" string');
-
-  if (typeof data === 'string') {
-    try {
-      data = JSON.parse(data);
-    } catch (err) {
-      data = data.split(/,\s*/);
-      assert(data.length === 2, 'must provide a string "lat,lng" creating a GeoPoint with a string');
-    }
-  }
-  if (Array.isArray(data)) {
-    data = {
-      lat: Number(data[0]),
-      lng: Number(data[1]),
-    };
-  } else {
-    data.lng = Number(data.lng);
-    data.lat = Number(data.lat);
-  }
-
-  assert(typeof data === 'object', 'must provide a lat and lng object when creating a GeoPoint');
-  assert(typeof data.lat === 'number' && !isNaN(data.lat), 'lat must be a number when creating a GeoPoint');
-  assert(typeof data.lng === 'number' && !isNaN(data.lng), 'lng must be a number when creating a GeoPoint');
-  assert(data.lng <= 180, 'lng must be <= 180');
-  assert(data.lng >= -180, 'lng must be >= -180');
-  assert(data.lat <= 90, 'lat must be <= 90');
-  assert(data.lat >= -90, 'lat must be >= -90');
-
-  this.lat = data.lat;
-  this.lng = data.lng;
+export type GeoPointData = {
+  lat: number,
+  lng: number,
 }
 
-/**
- * Determine the spherical distance between two GeoPoints.
- *
- * @param  {GeoPoint} pointA Point A
- * @param  {GeoPoint} pointB Point B
- * @options  {Object} options Options object with one key, 'type'.  See below.
- * @property {String} type Unit of measurement, one of:
- *
- * - `miles` (default)
- * - `radians`
- * - `kilometers`
- * - `meters`
- * - `miles`
- * - `feet`
- * - `degrees`
- */
+function isSpreadGeoPointArray(input: [GeoPointData] | [string] | [number, number] | [[number, number]]): input is [number, number] {
+  return input.length === 2;
+}
 
-GeoPoint.distanceBetween = function distanceBetween(a, b, options) {
-  if (!(a instanceof GeoPoint)) {
-    a = GeoPoint(a);
+export class GeoPoint {
+  lat: number;
+  lng: number;
+
+  constructor(...args: [GeoPointData] | [string] | [number, number] | [[number, number]]) {
+    let data: GeoPointData | string | [number, number];
+    let dataAsArray: any[];
+    let normalizedData: GeoPointData;
+    if (isSpreadGeoPointArray(args)) {
+      normalizedData = {
+        lat: arguments[0],
+        lng: arguments[1],
+      };
+    }
+    else {
+      data = args[0];
+    }
+
+    assert(Array.isArray(data) || typeof data === 'object' || typeof data === 'string',
+      'must provide valid geo-coordinates array [lat, lng] or object or a "lat, lng" string');
+  
+    if (typeof data === 'string') {
+      try {
+        normalizedData = JSON.parse(data);
+      } catch (err) {
+        dataAsArray = (data as string).split(/,\s*/);
+        assert(data.length === 2, 'must provide a string "lat,lng" creating a GeoPoint with a string');
+      }
+    }
+    if (Array.isArray(dataAsArray)) {
+      normalizedData = {
+        lat: Number(dataAsArray[0]),
+        lng: Number(dataAsArray[1]),
+      };
+    }
+  
+    assert(typeof data === 'object', 'must provide a lat and lng object when creating a GeoPoint');
+    assert(typeof data.lat === 'number' && !isNaN(data.lat), 'lat must be a number when creating a GeoPoint');
+    assert(typeof data.lng === 'number' && !isNaN(data.lng), 'lng must be a number when creating a GeoPoint');
+    assert(data.lng <= 180, 'lng must be <= 180');
+    assert(data.lng >= -180, 'lng must be >= -180');
+    assert(data.lat <= 90, 'lat must be <= 90');
+    assert(data.lat >= -90, 'lat must be >= -90');
+  
+    this.lat = normalizedData.lat;
+    this.lng = normalizedData.lng;
   }
-  if (!(b instanceof GeoPoint)) {
-    b = GeoPoint(b);
-  }
 
-  const x1 = a.lat;
-  const y1 = a.lng;
+  /**
+   * Determine the spherical distance between two GeoPoints.
+   *
+   * @param  {GeoPoint} pointA Point A
+   * @param  {GeoPoint} pointB Point B
+   * @options  {Object} options Options object with one key, 'type'.  See below.
+   * @property {String} type Unit of measurement, one of:
+   *
+   * - `miles` (default)
+   * - `radians`
+   * - `kilometers`
+   * - `meters`
+   * - `miles`
+   * - `feet`
+   * - `degrees`
+   */
+  
+  static distanceBetween(a: GeoPoint | GeoPointData, b: GeoPoint | GeoPointData, options: GeoPointDistanceOptions): number {
+    if (!(a instanceof GeoPoint)) {
+      a = new GeoPoint(a);
+    }
+    if (!(b instanceof GeoPoint)) {
+      b = new GeoPoint(b);
+    }
+  
+    const x1 = a.lat;
+    const y1 = a.lng;
+  
+    const x2 = b.lat;
+    const y2 = b.lng;
+  
+    return geoDistance(x1, y1, x2, y2, options);
+  };
 
-  const x2 = b.lat;
-  const y2 = b.lng;
+  /**
+   * Determine the spherical distance to the given point.
+   * Example:
+   * ```js
+   * var loopback = require(‘loopback’);
+   *
+   * var here = new loopback.GeoPoint({lat: 10, lng: 10});
+   * var there = new loopback.GeoPoint({lat: 5, lng: 5});
+   *
+   * loopback.GeoPoint.distanceBetween(here, there, {type: 'miles'}) // 438
+   * ```
+   * @param {Object} point GeoPoint object to which to measure distance.
+   * @options  {Object} options Options object with one key, 'type'.  See below.
+   * @property {String} type Unit of measurement, one of:
+   *
+   * - `miles` (default)
+   * - `radians`
+   * - `kilometers`
+   * - `meters`
+   * - `miles`
+   * - `feet`
+   * - `degrees`
+   */
+  
+  distanceTo(point: GeoPoint | GeoPointData, options: GeoPointDistanceOptions): number {
+    return GeoPoint.distanceBetween(this, point, options);
+  };
 
-  return geoDistance(x1, y1, x2, y2, options);
-};
+  /**
+   * Simple serialization.
+   */
+  toString(): string {
+    return this.lat + ',' + this.lng;
+  };
+}
 
-/**
- * Determine the spherical distance to the given point.
- * Example:
- * ```js
- * var loopback = require(‘loopback’);
- *
- * var here = new loopback.GeoPoint({lat: 10, lng: 10});
- * var there = new loopback.GeoPoint({lat: 5, lng: 5});
- *
- * loopback.GeoPoint.distanceBetween(here, there, {type: 'miles'}) // 438
- * ```
- * @param {Object} point GeoPoint object to which to measure distance.
- * @options  {Object} options Options object with one key, 'type'.  See below.
- * @property {String} type Unit of measurement, one of:
- *
- * - `miles` (default)
- * - `radians`
- * - `kilometers`
- * - `meters`
- * - `miles`
- * - `feet`
- * - `degrees`
- */
-
-GeoPoint.prototype.distanceTo = function(point, options) {
-  return GeoPoint.distanceBetween(this, point, options);
-};
-
-/**
- * Simple serialization.
- */
-
-GeoPoint.prototype.toString = function() {
-  return this.lat + ',' + this.lng;
-};
+type GeoPointDistanceOptions = {
+  type: 'miles' | 'radians' | 'kilometers' | 'meters' | 'miles' | 'feet' | 'degrees'
+}
 
 /**
  * @property {Number} DEG2RAD - Factor to convert degrees to radians.
@@ -298,7 +309,7 @@ const EARTH_RADIUS = {
   degrees: RAD2DEG,
 };
 
-function geoDistance(x1, y1, x2, y2, options) {
+function geoDistance(x1: number, y1: number, x2: number, y2: number, options: GeoPointDistanceOptions) {
   const type = (options && options.type) || 'miles';
 
   // Convert to radians
